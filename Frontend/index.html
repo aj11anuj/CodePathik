@@ -219,7 +219,7 @@
 
       try {
         document.getElementById("results").innerHTML = "<div class='repo-info'>Analyzing repository... ⏳</div>";
-        const response = await fetch("http://localhost:8000/analyze", {
+        const response = await fetch("https://codepathik.onrender.com/analyze", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -356,7 +356,7 @@ async function explainRepository() {
   explainBtn.textContent = "Analyzing...";
   
   try {
-    const response = await fetch("http://localhost:8000/analyze/repo", {
+    const response = await fetch("https://codepathik.onrender.com/analyze/repo", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -391,7 +391,7 @@ async function analyzeSelectedFile() {
   resultDiv.innerHTML = '<div class="loading">Analyzing code... ⏳</div>';
   
   try {
-    const response = await fetch("http://localhost:8000/analyze/code", {
+    const response = await fetch("https://codepathik.onrender.com/analyze/code", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
