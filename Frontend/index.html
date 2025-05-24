@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CodePathik 🧭</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #121212;
+      color: #f1f1f1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    h1 {
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      color: #aaa;
+      margin-bottom: 2rem;
+    }
+
+    input[type="text"] {
+      padding: 0.8rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      width: 400px;
+      max-width: 90%;
+    }
+
+    button {
+      padding: 0.8rem 1.2rem;
+      margin-left: 1rem;
+      font-size: 1rem;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #results {
+      margin-top: 2rem;
+      width: 100%;
+      max-width: 800px;
+      text-align: left;
+    }
+
+    .repo-info, .file-structure {
+      background-color: #1e1e1e;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 6px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.3);
+    }
+
+    /* Tree View Styles */
+    .tree-item {
+      cursor: pointer;
+      padding: 4px 0;
+      user-select: none;
+    }
+    
+    .tree-item:hover {
+      color: #4dabf7;
+    }
+    
+    .tree-item.folder::before {
+      content: "📁 ";
+    }
+    
+    .tree-item.file::before {
+      content: "📄 ";
+    }
+    
+    .tree-item.collapsed::before {
+      content: "📂 ";
+    }
+    
+    .tree-children {
+      margin-left: 20px;
+      display: block;
+    }
+    
+    .tree-children.collapsed {
+      display: none;
+    }
+
+    /* Tab Styles */
+    .tab-container {
+      display: flex;
+      margin-bottom: 1rem;
+    }
+    
+    .tab {
+      padding: 8px 16px;
+      cursor: pointer;
+      background-color: #2d2d2d;
+      margin-right: 5px;
+      border-radius: 4px 4px 0 0;
+    }
+    
+    .tab.active {
+      background-color: #1e1e1e;
+      font-weight: bold;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Analysis Styles */
+    .insight-card {
+      background-color: #252525;
+      border-left: 4px solid #4dabf7;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 0 4px 4px 0;
+    }
+    
+    .insight-card h4 {
+      margin-top: 0;
+      color: #4dabf7;
+    }
+    
+    .full-analysis {
+      background-color: #1e1e1e;
+      padding: 1rem;
+      border-radius: 6px;
+      white-space: pre-wrap;
+    }
+
+    /* Code Analysis Styles */
+    .file-selector {
+      margin-bottom: 1rem;
+      display: flex;
+      gap: 10px;
+    }
+
+    #file-select {
+      flex-grow: 1;
+      padding: 8px;
+      background: #2d2d2d;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+
+    .analysis-result {
+      background: #1e1e1e;
+      padding: 1rem;
+      border-radius: 6px;
+      margin-top: 1rem;
+    }
+
+    .analysis-section {
+      margin-bottom: 1rem;
+    }
+
+    .analysis-section h4 {
+      color: #4dabf7;
+      margin-bottom: 0.5rem;
+    }
+
+    .code-analysis pre {
+      background: #252525;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+
+    .loading {
+      color: #4dabf7;
+      text-align: center;
+      padding: 1rem;
+    }
+
+    .error {
+      color: #ff6b6b;
+      padding: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🧭 CodePathik</h1>
+  <p>Navigate and understand codebase of any GitHub repo, Just paste the link below.</p>
+
+  <div>
+    <input type="text" id="repoInput" placeholder="https://github.com/user/repo-name">
+    <button onclick="analyzeRepo()">Explore</button>
+  </div>
+
+  <div id="results"></div>
+
+  <script>
+    let currentRepoData = null;
+
+    async function analyzeRepo() {
+      const repoUrl = document.getElementById("repoInput").value;
+      if (!repoUrl) {
+        alert("Please enter a GitHub repository URL");
+        return;
+      }
+
+      try {
+        document.getElementById("results").innerHTML = "<div class='repo-info'>Analyzing repository... ⏳</div>";
+        const response = await fetch("http://localhost:8000/analyze", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ repo_url: repoUrl }),
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        currentRepoData = data;
+        console.log("Repo structure:", data);
+        const resultsDiv = document.getElementById("results");
+        resultsDiv.innerHTML = "";
+
+        // Render repo info
+        resultsDiv.innerHTML += `
+          <div class="repo-info">
+            <h3>${data.name}</h3>
+            <p>${data.description || "No description available."}</p>
+            <p><strong>Stars:</strong> ${data.stars}⭐</p>
+            <p><strong>Language:</strong> ${data.language || "Unknown"}</p>
+          </div>
+        `;
+
+        // Render tab controls
+        resultsDiv.innerHTML += `
+          <div class="tab-container">
+            <div class="tab active" onclick="switchTab('structure')">Structure</div>
+            <div class="tab" onclick="switchTab('explanation')">Explanation</div>
+            <div class="tab" onclick="switchTab('code-analysis')">Code Analysis</div>
+          </div>
+          
+          <div id="structure-tab" class="tab-content active">
+            <div class="file-structure">
+              <h4>Codebase Structure:</h4>
+              <div id="treeContainer"></div>
+            </div>
+          </div>
+          
+          <div id="explanation-tab" class="tab-content">
+            <div id="repo-explanation">
+              <div class="insight-card">
+                <h4>Overview</h4>
+                <div id="overview-text">Click "Explain Repository" to generate analysis</div>
+              </div>
+              <button onclick="explainRepository()" id="explain-btn">Explain Repository</button>
+              <div class="full-analysis" id="full-analysis" style="display: none;">
+                <h3>Detailed Analysis</h3>
+                <div id="analysis-text"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div id="code-analysis-tab" class="tab-content">
+            <div class="file-selector">
+              <select id="file-select">
+                <option value="">Select a file to analyze</option>
+              </select>
+              <button onclick="analyzeSelectedFile()">Analyze Code</button>
+            </div>
+            <div id="code-analysis-result" class="analysis-result"></div>
+          </div>
+        `;
+
+        // Render the tree
+        const treeContainer = document.getElementById("treeContainer");
+        if (data && data.file_tree) {
+          renderTree(data.file_tree, treeContainer);
+          populateFileSelect(data.file_tree);
+        } else {
+          treeContainer.textContent = "No valid tree structure received.";
+        }
+      } catch (error) {
+        console.error("Error analyzing repository:", error);
+        document.getElementById("results").innerHTML = `
+          <div class="repo-info" style="color: #ff6b6b;">
+            Error: ${error.message}
+          </div>
+        `;
+      }
+    }
+
+    function renderTree(node, container) {
+      const ul = document.createElement("ul");
+      for (const [key, value] of Object.entries(node)) {
+        const li = document.createElement("li");
+        const isFolder = value && typeof value === 'object';
+        const item = document.createElement("div");
+        item.className = `tree-item ${isFolder ? 'folder' : 'file'}`;
+        item.textContent = key;
+        if (isFolder) {
+          item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            item.classList.toggle('collapsed');
+            const childrenDiv = item.nextElementSibling;
+            if (childrenDiv) {
+              childrenDiv.classList.toggle('collapsed');
+            }
+          });
+          const childrenDiv = document.createElement("div");
+          childrenDiv.className = 'tree-children';
+          renderTree(value, childrenDiv);
+          li.appendChild(item);
+          li.appendChild(childrenDiv);
+        } else {
+          li.appendChild(item);
+        }
+        ul.appendChild(li);
+      }
+      container.appendChild(ul);
+    }
+
+    function populateFileSelect(tree) {
+      const select = document.getElementById("file-select");
+      select.innerHTML = '<option value="">Select a file to analyze</option>';
+      const addFiles = (node, path = "") => {
+        for (const [name, value] of Object.entries(node)) {
+          const fullPath = path ? `${path}/${name}` : name;
+          if (value === null) {
+            select.add(new Option(fullPath, fullPath));
+          } else {
+            addFiles(value, fullPath);
+          }
+        }
+      };
+      addFiles(tree);
+    }
+
+async function explainRepository() {
+  if (!currentRepoData) return;
+  const explainBtn = document.getElementById("explain-btn");
+  explainBtn.disabled = true;
+  explainBtn.textContent = "Analyzing...";
+  
+  try {
+    const response = await fetch("http://localhost:8000/analyze/repo", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ repo_url: document.getElementById("repoInput").value }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    
+    document.getElementById("overview-text").innerHTML = 
+      data.overview || data.analysis?.overview || "No overview available";
+    document.getElementById("analysis-text").innerHTML = 
+      data.detailed || data.analysis?.detailed || data.llm_analysis?.analysis || "No detailed analysis";
+    document.getElementById("full-analysis").style.display = "block";
+
+  } catch (error) {
+    document.getElementById("overview-text").innerHTML = 
+      `<span style="color: #ff6b6b;">Error: ${error.message}</span>`;
+  } finally {
+    explainBtn.disabled = false;
+    explainBtn.textContent = "Explain Repository";
+  }
+}
+
+async function analyzeSelectedFile() {
+  const filePath = document.getElementById("file-select").value;
+  if (!filePath || !currentRepoData) return;
+  const resultDiv = document.getElementById("code-analysis-result");
+  resultDiv.innerHTML = '<div class="loading">Analyzing code... ⏳</div>';
+  
+  try {
+    const response = await fetch("http://localhost:8000/analyze/code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        repo_url: document.getElementById("repoInput").value,
+        file_path: filePath
+      })
+    });
+    
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+    const analysis = data.analysis || data;
+    
+    resultDiv.innerHTML = `
+      <div class="code-analysis">
+        <h3>${filePath.split('/').pop()}</h3>
+        <div class="analysis-section">
+          <h4>Purpose</h4>
+          <p>${analysis.purpose || analysis.analysis?.purpose || 'Not specified'}</p>
+        </div>
+        <div class="analysis-section">
+          <h4>Key Components</h4>
+          <ul>
+            ${(analysis.components || analysis.analysis?.components || ['None identified']).map(c => `<li>${c}</li>`).join('')}
+          </ul>
+        </div>
+        <div class="analysis-section">
+          <h4>Analysis</h4>
+          <pre>${analysis.code_insights || analysis.detailed || analysis.analysis?.detailed || 'No analysis available'}</pre>
+        </div>
+      </div>
+    `;
+  } catch (error) {
+    resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+  }
+}
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      document.getElementById(`${tabName}-tab`).classList.add('active');
+      document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
+    }
+  </script>
+</body>
+</html>
