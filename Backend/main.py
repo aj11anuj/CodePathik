@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from repo_handler import process_github_repo, fetch_file_content
 from llm_integration import analyze_with_together
 from dotenv import load_dotenv
+from healthcheck import router as health_router
 
 load_dotenv()
 app = FastAPI()
@@ -18,6 +19,8 @@ app.add_middleware(
 
 class RepoRequest(BaseModel):
     repo_url: str
+
+app.include_router(health_router)
 
 @app.post("/analyze")
 async def analyze_repo(payload: RepoRequest):
